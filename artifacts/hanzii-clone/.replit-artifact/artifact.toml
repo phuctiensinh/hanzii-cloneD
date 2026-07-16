@@ -1,0 +1,40 @@
+kind = "mobile"
+previewPath = "/"
+title = "Hanzii Clone"
+version = "1.0.0"
+id = "artifacts/hanzii-clone"
+router = "expo-domain"
+
+[[integratedSkills]]
+name = "expo"
+version = "1.0.0"
+
+[[services]]
+ensurePreviewReachable = "/status"
+name = "expo"
+paths = [ "/" ]
+localPort = 24453
+
+[services.development]
+run = "pnpm --filter @workspace/hanzii-clone run dev"
+
+[services.development.env]
+PORT = "24453"
+BASE_PATH = "/"
+
+[services.production.build]
+args = [ "pnpm", "--filter", "@workspace/hanzii-clone", "run", "build" ]
+
+[services.production.build.env]
+NODE_ENV = "production"
+
+[services.production.run]
+args = [ "node", "artifacts/hanzii-clone/server/serve.js" ]
+
+[services.production.run.env]
+PORT = "24453"
+BASE_PATH = "/"
+NODE_ENV = "production"
+
+[services.production.health.startup]
+path = "/status"
