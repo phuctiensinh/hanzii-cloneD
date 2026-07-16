@@ -1,5 +1,6 @@
 {
-  "buildCommand": "npx expo export -p web --output-dir dist",
+  "installCommand": "npm install",
+  "buildCommand": "./node_modules/.bin/expo export -p web --output-dir dist",
   "outputDirectory": "dist",
   "rewrites": [
     { "source": "/api/translate-word", "destination": "/api/translate-word" },
