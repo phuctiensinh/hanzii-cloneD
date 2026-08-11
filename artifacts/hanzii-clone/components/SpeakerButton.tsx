@@ -1,6 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import React, { useState } from "react";
-import { TouchableOpacity, StyleSheet, Platform } from "react-native";
+import { TouchableOpacity, StyleSheet, Platform, StyleProp, ViewStyle } from "react-native";
 import * as Haptics from "expo-haptics";
 
 import colors from "@/constants/colors";
@@ -10,13 +10,17 @@ interface Props {
   text: string;
   size?: number;
   color?: string;
+  style?: StyleProp<ViewStyle>;
 }
 
-export function SpeakerButton({ text, size = 18, color = colors.light.primary }: Props) {
+export function SpeakerButton({ text, size = 18, color = colors.light.primary, style }: Props) {
   const { speak } = useSpeech();
   const [speaking, setSpeaking] = useState(false);
 
-  const handlePress = () => {
+  const handlePress = (e: any) => {
+    if (e && e.stopPropagation) {
+      e.stopPropagation();
+    }
     if (Platform.OS !== "web") {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
@@ -27,7 +31,7 @@ export function SpeakerButton({ text, size = 18, color = colors.light.primary }:
 
   return (
     <TouchableOpacity
-      style={[styles.btn, speaking && styles.btnActive]}
+      style={[styles.btn, speaking && styles.btnActive, style]}
       onPress={handlePress}
       activeOpacity={0.7}
       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}

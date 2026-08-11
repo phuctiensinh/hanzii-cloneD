@@ -18,7 +18,7 @@ function NativeTabLayout() {
         <Label>Từ điển</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="learn">
-        <Icon sf={{ default: "rectangle.on.rectangle", selected: "rectangle.on.rectangle.fill" }} />
+        <Icon sf={{ default: "rectangle.on.rectangle", selected: "rectangle.fill.on.rectangle.fill" }} />
         <Label>Học</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="hsk">

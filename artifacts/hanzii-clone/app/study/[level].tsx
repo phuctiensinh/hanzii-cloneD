@@ -1,7 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -18,7 +18,15 @@ export default function StudyScreen() {
   const { markLearned, isLearned } = useLearning();
 
   const allWords = getWordsByHSK(lvl);
-  const [index, setIndex] = useState(0);
+
+  // Resume from the first unlearned word instead of always starting at 0
+  const startIndex = useMemo(() => {
+    const first = allWords.findIndex((w) => !isLearned(w.id));
+    return first === -1 ? 0 : first;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // intentionally only once on mount
+
+  const [index, setIndex] = useState(startIndex);
   const [sessionLearned, setSessionLearned] = useState(0);
   const [done, setDone] = useState(false);
   const [showingBack, setShowingBack] = useState(false);
@@ -28,22 +36,7 @@ export default function StudyScreen() {
   const topPadding = Platform.OS === "web" ? 67 : insets.top;
   const bottomPadding = Platform.OS === "web" ? 34 : insets.bottom;
 
-  const handleKnow = useCallback(() => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    if (!isLearned(current.id)) {
-      markLearned(current.id, lvl);
-      setSessionLearned((n) => n + 1);
-    }
-    if (index + 1 >= allWords.length) {
-      setDone(true);
-    } else {
-      setIndex((i) => i + 1);
-      setShowingBack(false);
-    }
-  }, [current, index, allWords.length, isLearned, markLearned, lvl]);
-
-  const handleSkip = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  const goToNext = useCallback(() => {
     if (index + 1 >= allWords.length) {
       setDone(true);
     } else {
@@ -51,6 +44,27 @@ export default function StudyScreen() {
       setShowingBack(false);
     }
   }, [index, allWords.length]);
+
+  const goToPrev = useCallback(() => {
+    if (index > 0) {
+      setIndex((i) => i - 1);
+      setShowingBack(false);
+    }
+  }, [index]);
+
+  const handleKnow = useCallback(() => {
+    if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    if (!isLearned(current.id)) {
+      markLearned(current.id, lvl);
+      setSessionLearned((n) => n + 1);
+    }
+    goToNext();
+  }, [current, isLearned, markLearned, lvl, goToNext]);
+
+  const handleSkip = useCallback(() => {
+    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    goToNext();
+  }, [goToNext]);
 
   if (allWords.length === 0) {
     return (
@@ -92,7 +106,7 @@ export default function StudyScreen() {
             onPress={() => { setIndex(0); setSessionLearned(0); setDone(false); setShowingBack(false); }}
           >
             <Feather name="refresh-cw" size={16} color="#fff" />
-            <Text style={styles.restartBtnText}>Học lại</Text>
+            <Text style={styles.restartBtnText}>Học lại từ đầu</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
             <Text style={styles.backBtnText}>Quay lại</Text>
@@ -106,9 +120,21 @@ export default function StudyScreen() {
     <View style={[styles.container, { paddingTop: topPadding }]}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.closeBtn}>
+        {/* Close */}
+        <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn}>
           <Feather name="x" size={20} color={colors.light.foreground} />
         </TouchableOpacity>
+
+        {/* Prev */}
+        <TouchableOpacity
+          onPress={goToPrev}
+          style={[styles.iconBtn, index === 0 && styles.iconBtnDisabled]}
+          disabled={index === 0}
+        >
+          <Feather name="chevron-left" size={20} color={index === 0 ? colors.light.muted : colors.light.foreground} />
+        </TouchableOpacity>
+
+        {/* Progress bar */}
         <View style={styles.progressArea}>
           <View style={styles.progressTrack}>
             <View
@@ -120,17 +146,34 @@ export default function StudyScreen() {
           </View>
           <Text style={styles.progressText}>{index + 1}/{allWords.length}</Text>
         </View>
+
+        {/* Next (free navigation without marking) */}
+        <TouchableOpacity
+          onPress={goToNext}
+          style={[styles.iconBtn, index + 1 >= allWords.length && styles.iconBtnDisabled]}
+          disabled={index + 1 >= allWords.length}
+        >
+          <Feather
+            name="chevron-right"
+            size={20}
+            color={index + 1 >= allWords.length ? colors.light.muted : colors.light.foreground}
+          />
+        </TouchableOpacity>
       </View>
 
-      {/* Card */}
+      {/* Card — pass index as resetKey so it flips back to front on word change */}
       <View style={styles.cardArea}>
-        <FlashCard word={current} onFlip={(s) => setShowingBack(s === "back")} />
+        <FlashCard
+          word={current}
+          onFlip={(s) => setShowingBack(s === "back")}
+          resetKey={index}
+        />
       </View>
 
       {/* Hint */}
       <Text style={styles.hint}>Nhấn vào thẻ để xem nghĩa</Text>
 
-      {/* Buttons */}
+      {/* Action buttons */}
       <View style={[styles.btnRow, { paddingBottom: bottomPadding + 20 }]}>
         <TouchableOpacity style={styles.skipBtn} onPress={handleSkip} activeOpacity={0.8}>
           <Feather name="arrow-right" size={20} color={colors.light.mutedForeground} />
@@ -152,9 +195,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 16,
     paddingBottom: 16,
-    gap: 12,
+    gap: 8,
   },
-  closeBtn: {
+  iconBtn: {
     width: 38,
     height: 38,
     borderRadius: 19,
@@ -163,6 +206,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 1,
     borderColor: colors.light.border,
+  },
+  iconBtnDisabled: {
+    backgroundColor: colors.light.muted,
+    borderColor: colors.light.border,
+    opacity: 0.5,
   },
   progressArea: { flex: 1, gap: 6 },
   progressTrack: { height: 6, backgroundColor: colors.light.muted, borderRadius: 3, overflow: "hidden" },

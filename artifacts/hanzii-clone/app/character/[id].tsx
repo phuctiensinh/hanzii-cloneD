@@ -1,8 +1,8 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React from "react";
-import { Alert, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import React, { useState, useCallback, useRef } from "react";
+import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import colors from "@/constants/colors";
@@ -12,6 +12,8 @@ import { useCustomWords } from "@/context/CustomWordsContext";
 import { HSKBadge } from "@/components/HSKBadge";
 import { SpeakerButton } from "@/components/SpeakerButton";
 import { StrokeOrderView } from "@/components/StrokeOrderView";
+import { ConfirmModal } from "@/components/ConfirmModal";
+import { Toast } from "@/components/Toast";
 
 export default function CharacterDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -19,6 +21,20 @@ export default function CharacterDetailScreen() {
   const insets = useSafeAreaInsets();
   const { toggleSaved, markLearned, unmarkLearned, isSaved, isLearned } = useLearning();
   const { getCustomWordById, deleteWord } = useCustomWords();
+
+  const [confirmVisible, setConfirmVisible] = useState(false);
+  const [toast, setToast] = useState<{ visible: boolean; message: string; type: "success" | "info" | "error" }>({
+    visible: false,
+    message: "",
+    type: "success",
+  });
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showToast = useCallback((message: string, type: "success" | "info" | "error" = "success") => {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    setToast({ visible: true, message, type });
+    toastTimer.current = setTimeout(() => setToast((t) => ({ ...t, visible: false })), 2200);
+  }, []);
 
   const word = getWordById(id ?? "") ?? getCustomWordById(id ?? "");
   if (!word) {
@@ -33,16 +49,23 @@ export default function CharacterDetailScreen() {
   const learned = isLearned(word.id);
 
   const handleSave = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     toggleSaved(word.id);
+    if (saved) {
+      showToast(`Đã bỏ lưu "${word.character}"`, "info");
+    } else {
+      showToast(`Đã lưu "${word.character}" vào danh sách`, "success");
+    }
   };
 
   const handleLearn = () => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     if (learned) {
       unmarkLearned(word.id, word.hskLevel);
+      showToast(`Đã bỏ đánh dấu "${word.character}"`, "info");
     } else {
       markLearned(word.id, word.hskLevel);
+      showToast(`Đã học "${word.character}" 🎉`, "success");
     }
   };
 
@@ -50,19 +73,10 @@ export default function CharacterDetailScreen() {
     router.push({ pathname: "/write/[id]", params: { id: word.id } });
   };
 
-  const handleDelete = () => {
-    Alert.alert(
-      "Xoá từ này?",
-      `Từ "${word.character}" sẽ bị xoá khỏi danh sách của bạn.`,
-      [
-        { text: "Huỷ", style: "cancel" },
-        {
-          text: "Xoá",
-          style: "destructive",
-          onPress: () => { deleteWord(word.id); router.back(); },
-        },
-      ]
-    );
+  const handleDeleteConfirmed = () => {
+    setConfirmVisible(false);
+    deleteWord(word.id);
+    router.back();
   };
 
   const bottomPadding = Platform.OS === "web" ? 34 : insets.bottom;
@@ -83,13 +97,13 @@ export default function CharacterDetailScreen() {
             </View>
           )}
           {word.isCustom ? (
-            <TouchableOpacity onPress={handleDelete} style={styles.navBtn}>
+            <TouchableOpacity onPress={() => setConfirmVisible(true)} style={styles.navBtn}>
               <Feather name="trash-2" size={20} color="#E53935" />
             </TouchableOpacity>
           ) : (
             <TouchableOpacity onPress={handleSave} style={styles.navBtn}>
               <Feather
-                name="bookmark"
+                name={saved ? "bookmark" : "bookmark"}
                 size={22}
                 color={saved ? colors.light.primary : colors.light.mutedForeground}
               />
@@ -198,6 +212,21 @@ export default function CharacterDetailScreen() {
           </Text>
         </TouchableOpacity>
       </View>
+
+      {/* Custom confirm modal (replaces window.confirm / Alert) */}
+      <ConfirmModal
+        visible={confirmVisible}
+        title="Xoá từ này?"
+        message={`Từ "${word.character}" sẽ bị xoá khỏi danh sách của bạn.`}
+        confirmText="Xoá"
+        cancelText="Huỷ"
+        destructive
+        onConfirm={handleDeleteConfirmed}
+        onCancel={() => setConfirmVisible(false)}
+      />
+
+      {/* Toast notification */}
+      <Toast visible={toast.visible} message={toast.message} type={toast.type} />
     </View>
   );
 }
@@ -238,11 +267,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.light.border,
   },
-  heroBottom: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
+  heroBottom: { flexDirection: "row", alignItems: "center", gap: 10 },
   character: { fontSize: 90, color: colors.light.primary, fontWeight: "700", lineHeight: 110 },
   traditional: { fontSize: 15, color: colors.light.mutedForeground, fontFamily: "Inter_400Regular" },
   pinyin: { fontSize: 22, color: colors.light.foreground, fontFamily: "Inter_600SemiBold", marginBottom: 4 },

@@ -1,19 +1,147 @@
 import { Feather } from "@expo/vector-icons";
-import React from "react";
-import { Platform, ScrollView, StyleSheet, Text, View } from "react-native";
+import React, { useState } from "react";
+import {
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  TextInput,
+  TouchableOpacity,
+  ActivityIndicator,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import colors from "@/constants/colors";
 import { HSK_LEVELS, HSK_WORDS } from "@/constants/data";
 import { useLearning } from "@/context/LearningContext";
+import { useAuth } from "@/context/AuthContext";
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
+  const { user, signIn, signUp, signOut, loading: authLoading } = useAuth();
   const { learnedWords, savedWords, streak, progress, lastStudyDate } = useLearning();
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isLogin, setIsLogin] = useState(true);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [actionLoading, setActionLoading] = useState(false);
+
   const topPadding = Platform.OS === "web" ? 67 : insets.top;
+
+  const handleAuth = async () => {
+    if (!email.trim() || !password.trim()) {
+      setErrorMsg("Vui lòng nhập đầy đủ Email và Mật khẩu.");
+      return;
+    }
+    setErrorMsg("");
+    setActionLoading(true);
+    try {
+      if (isLogin) {
+        const { error } = await signIn(email.trim(), password.trim());
+        if (error) setErrorMsg(error.message);
+      } else {
+        const { error } = await signUp(email.trim(), password.trim());
+        if (error) {
+          setErrorMsg(error.message);
+        } else {
+          setErrorMsg("Đăng ký thành công! Vui lòng đăng nhập.");
+          setIsLogin(true);
+        }
+      }
+    } catch (e) {
+      setErrorMsg("Đã xảy ra lỗi kết nối.");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleSignOut = async () => {
+    setActionLoading(true);
+    await signOut();
+    setActionLoading(false);
+  };
 
   const totalWords = HSK_WORDS.length;
   const overallPct = totalWords > 0 ? Math.round((learnedWords.length / totalWords) * 100) : 0;
+
+  if (authLoading) {
+    return (
+      <View style={[styles.container, styles.center]}>
+        <ActivityIndicator size="large" color={colors.light.primary} />
+      </View>
+    );
+  }
+
+  if (!user) {
+    return (
+      <View style={[styles.container, { paddingTop: topPadding }]}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Đồng bộ tài khoản</Text>
+        </View>
+
+        <ScrollView contentContainerStyle={styles.authContainer} showsVerticalScrollIndicator={false}>
+          <View style={styles.authCard}>
+            <Text style={styles.authTitle}>
+              {isLogin ? "Đăng nhập Hanzii Clone" : "Tạo tài khoản mới"}
+            </Text>
+            <Text style={styles.authDesc}>
+              Đăng nhập để đồng bộ tiến độ học tập và từ vựng của bạn trên mọi thiết bị.
+            </Text>
+
+            {errorMsg ? <Text style={styles.errorText}>{errorMsg}</Text> : null}
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Email</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="email@example.com"
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Mật khẩu</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="••••••••"
+                secureTextEntry
+                value={password}
+                onChangeText={setPassword}
+                autoCapitalize="none"
+              />
+            </View>
+
+            <TouchableOpacity style={styles.submitBtn} onPress={handleAuth} disabled={actionLoading}>
+              {actionLoading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.submitBtnText}>
+                  {isLogin ? "Đăng nhập" : "Đăng ký tài khoản"}
+                </Text>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.switchBtn}
+              onPress={() => {
+                setIsLogin(!isLogin);
+                setErrorMsg("");
+              }}
+            >
+              <Text style={styles.switchBtnText}>
+                {isLogin ? "Chưa có tài khoản? Đăng ký ngay" : "Đã có tài khoản? Đăng nhập"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { paddingTop: topPadding }]}>
@@ -28,11 +156,18 @@ export default function ProfileScreen() {
             <Text style={styles.avatarText}>汉</Text>
           </View>
           <View style={styles.profileInfo}>
-            <Text style={styles.profileName}>Người học tiếng Trung</Text>
+            <Text style={styles.profileName} numberOfLines={1}>{user.email}</Text>
             <Text style={styles.profileSub}>
               {lastStudyDate ? `Học lần cuối: ${lastStudyDate}` : "Bắt đầu học ngay!"}
             </Text>
           </View>
+          <TouchableOpacity style={styles.logoutBtn} onPress={handleSignOut} disabled={actionLoading}>
+            {actionLoading ? (
+              <ActivityIndicator size="small" color="#C62828" />
+            ) : (
+              <Feather name="log-out" size={18} color="#C62828" />
+            )}
+          </TouchableOpacity>
         </View>
 
         {/* Stats */}
@@ -114,6 +249,7 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.light.background },
+  center: { justifyContent: "center", alignItems: "center" },
   header: { paddingHorizontal: 20, paddingBottom: 8 },
   title: { fontSize: 28, fontFamily: "Inter_700Bold", color: colors.light.foreground },
   content: { paddingHorizontal: 16, paddingBottom: 120, gap: 0 },
@@ -138,7 +274,7 @@ const styles = StyleSheet.create({
   },
   avatarText: { fontSize: 28, color: "#fff", fontWeight: "700" },
   profileInfo: { flex: 1 },
-  profileName: { fontSize: 17, fontFamily: "Inter_700Bold", color: colors.light.foreground },
+  profileName: { fontSize: 15, fontFamily: "Inter_700Bold", color: colors.light.foreground },
   profileSub: { fontSize: 13, color: colors.light.mutedForeground, fontFamily: "Inter_400Regular", marginTop: 3 },
   statsGrid: {
     flexDirection: "row",
@@ -194,4 +330,53 @@ const styles = StyleSheet.create({
   levelCount: { fontSize: 12, color: colors.light.mutedForeground, fontFamily: "Inter_500Medium" },
   progressTrackSmall: { height: 5, backgroundColor: colors.light.muted, borderRadius: 3, overflow: "hidden" },
   progressFillSmall: { height: "100%", borderRadius: 3 },
+
+  // Auth UI styles
+  authContainer: { padding: 20, justifyContent: "center", paddingBottom: 100 },
+  authCard: {
+    backgroundColor: colors.light.card,
+    borderRadius: 20,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: colors.light.border,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  authTitle: { fontSize: 20, fontFamily: "Inter_700Bold", color: colors.light.foreground, marginBottom: 8 },
+  authDesc: { fontSize: 13, color: colors.light.mutedForeground, fontFamily: "Inter_400Regular", marginBottom: 24, lineHeight: 18 },
+  inputGroup: { marginBottom: 16 },
+  inputLabel: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: colors.light.foreground, marginBottom: 6 },
+  input: {
+    height: 48,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.light.border,
+    paddingHorizontal: 16,
+    fontSize: 14,
+    color: colors.light.foreground,
+    backgroundColor: "#FAFAFA",
+  },
+  submitBtn: {
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: colors.light.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 16,
+  },
+  submitBtnText: { color: "#fff", fontSize: 15, fontFamily: "Inter_600SemiBold" },
+  switchBtn: { alignSelf: "center", marginTop: 16 },
+  switchBtnText: { color: colors.light.primary, fontSize: 13, fontFamily: "Inter_500Medium" },
+  errorText: { color: "#C62828", fontSize: 13, fontFamily: "Inter_500Medium", marginBottom: 16 },
+  logoutBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#FFEBEE",
+    alignItems: "center",
+    justifyContent: "center",
+  },
 });
