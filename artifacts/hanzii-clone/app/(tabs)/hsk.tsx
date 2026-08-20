@@ -8,40 +8,66 @@ import {
   Text,
   TouchableOpacity,
   View,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import colors from "@/constants/colors";
-import { HSK_LEVELS, HSK_WORDS } from "@/constants/data";
+import { HSK_WORDS } from "@/constants/data";
 import { HSK_EXAMS, HSKExam } from "@/constants/hskExams";
-import { useLearning } from "@/context/LearningContext";
 import { HSKExamModal } from "@/components/HSKExamModal";
 import { DailyQuizModal } from "@/components/DailyQuizModal";
 
-type ActiveTab = "daily" | "exams" | "words";
+type ActiveTab = "exams" | "daily";
 
 export default function HSKScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { progress } = useLearning();
 
   const [activeTab, setActiveTab] = useState<ActiveTab>("exams");
   const [selectedHskLevel, setSelectedHskLevel] = useState<number>(1);
   const [selectedExam, setSelectedExam] = useState<HSKExam | null>(null);
   const [showExamModal, setShowExamModal] = useState(false);
   const [showDailyQuizModal, setShowDailyQuizModal] = useState(false);
+  const [generatingAiExam, setGeneratingAiExam] = useState(false);
 
   const topPadding = Platform.OS === "web" ? 67 : insets.top;
 
-  // Filter exams by selected HSK level
-  const filteredExams = HSK_EXAMS.filter((ex) => ex.level === selectedHskLevel);
-
-  // Get Spaced Repetition words (Words long overdue for review)
+  // Get Spaced Repetition words
   const spacedWords = HSK_WORDS.slice(0, 5);
 
-  const handleStartExam = (exam: HSKExam) => {
-    setSelectedExam(exam);
-    setShowExamModal(true);
+  // Generate a brand new AI exam for chosen HSK level
+  const handleGenerateAiExam = async (levelToGen: number) => {
+    setGeneratingAiExam(true);
+
+    try {
+      const response = await fetch("/api/generate-hsk-exam", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ level: levelToGen }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Server returned ${response.status}`);
+      }
+
+      const aiExam: HSKExam = await response.json();
+      setSelectedExam(aiExam);
+      setShowExamModal(true);
+    } catch (err: any) {
+      console.warn("[HSKScreen] AI exam generation fallback to static exam:", err);
+      // Fallback to static exam if server error or API unavailable
+      const fallbackExam = HSK_EXAMS.find((ex) => ex.level === levelToGen) || HSK_EXAMS[0];
+      setSelectedExam(fallbackExam);
+      setShowExamModal(true);
+      Alert.alert(
+        "Thông báo bộ đề mẫu",
+        `Đã tải bộ đề thi HSK ${levelToGen} mẫu chuẩn chuẩn bị sẵn cho bạn!`
+      );
+    } finally {
+      setGeneratingAiExam(false);
+    }
   };
 
   return (
@@ -49,7 +75,7 @@ export default function HSKScreen() {
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>Luyện Thi & Ôn Tập HSK</Text>
-        <Text style={styles.subtitle}>Hệ thống bộ đề chuẩn quốc tế Hanban / CTI</Text>
+        <Text style={styles.subtitle}>Hệ thống bộ đề thi AI độc bản chuẩn quốc tế Hanban / CTI</Text>
       </View>
 
       {/* Main Tab Navigation Bar */}
@@ -63,9 +89,7 @@ export default function HSKScreen() {
             size={16}
             color={activeTab === "exams" ? colors.light.primary : colors.light.mutedForeground}
           />
-          <Text
-            style={[styles.mainTabText, activeTab === "exams" && styles.mainTabTextActive]}
-          >
+          <Text style={[styles.mainTabText, activeTab === "exams" && styles.mainTabTextActive]}>
             Đề Thi HSK
           </Text>
         </TouchableOpacity>
@@ -79,32 +103,14 @@ export default function HSKScreen() {
             size={16}
             color={activeTab === "daily" ? colors.light.primary : colors.light.mutedForeground}
           />
-          <Text
-            style={[styles.mainTabText, activeTab === "daily" && styles.mainTabTextActive]}
-          >
+          <Text style={[styles.mainTabText, activeTab === "daily" && styles.mainTabTextActive]}>
             Ôn Hằng Ngày
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.mainTabBtn, activeTab === "words" && styles.mainTabBtnActive]}
-          onPress={() => setActiveTab("words")}
-        >
-          <Feather
-            name="book"
-            size={16}
-            color={activeTab === "words" ? colors.light.primary : colors.light.mutedForeground}
-          />
-          <Text
-            style={[styles.mainTabText, activeTab === "words" && styles.mainTabTextActive]}
-          >
-            Từ Vựng
           </Text>
         </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        {/* TAB 1: MOCK EXAMS CENTER */}
+        {/* TAB 1: AI EXAM GENERATOR (Clean Unified Design) */}
         {activeTab === "exams" && (
           <View style={styles.tabSection}>
             {/* Level Filter Selector */}
@@ -137,65 +143,46 @@ export default function HSKScreen() {
               </ScrollView>
             </View>
 
-            {/* List of Mock Exams */}
-            <View style={styles.examList}>
-              <Text style={styles.sectionHeaderTitle}>
-                Bộ đề thi mẫu HSK {selectedHskLevel} chuẩn:
-              </Text>
-
-              {filteredExams.length > 0 ? (
-                filteredExams.map((ex) => (
-                  <View key={ex.id} style={styles.examCard}>
-                    <View style={styles.examCardTop}>
-                      <View style={styles.officialTag}>
-                        <Feather name="award" size={13} color="#2E7D32" />
-                        <Text style={styles.officialTagText}>Đề mẫu chính thức</Text>
-                      </View>
-                      <Text style={styles.examDurationText}>
-                        <Feather name="clock" size={12} color={colors.light.mutedForeground} />{" "}
-                        {ex.durationMinutes} phút
-                      </Text>
-                    </View>
-
-                    <Text style={styles.examCardTitle}>{ex.title}</Text>
-                    <Text style={styles.examCardSubtitle}>{ex.subtitle}</Text>
-
-                    <View style={styles.examMetaRow}>
-                      <View style={styles.metaItem}>
-                        <Feather name="help-circle" size={13} color={colors.light.mutedForeground} />
-                        <Text style={styles.metaText}>{ex.totalQuestions} câu hỏi</Text>
-                      </View>
-                      <View style={styles.metaItem}>
-                        <Feather name="check-square" size={13} color={colors.light.mutedForeground} />
-                        <Text style={styles.metaText}>Đạt từ {ex.passingScore}/200đ</Text>
-                      </View>
-                    </View>
-
-                    <TouchableOpacity
-                      style={styles.startExamBtn}
-                      onPress={() => handleStartExam(ex)}
-                      activeOpacity={0.8}
-                    >
-                      <Feather name="play-circle" size={16} color="#FFFFFF" />
-                      <Text style={styles.startExamBtnText}>Vào phòng thi ngay</Text>
-                    </TouchableOpacity>
-                  </View>
-                ))
-              ) : (
-                <View style={styles.emptyExamBox}>
-                  <Text style={styles.emptyExamText}>
-                    Đang cập nhật bộ đề thi chuẩn HSK {selectedHskLevel} mới nhất...
-                  </Text>
+            {/* AI Exam Generator Banner (Unified Light Card Theme) */}
+            <View style={styles.aiGenCard}>
+              <View style={styles.aiGenHeader}>
+                <View style={styles.aiGenBadge}>
+                  <Feather name="cpu" size={14} color={colors.light.primary} />
+                  <Text style={styles.aiGenBadgeText}>AI Exam Generator</Text>
                 </View>
-              )}
+                <Text style={styles.aiGenTitle}>
+                  Tạo bộ đề thi HSK {selectedHskLevel} độc bản bằng AI
+                </Text>
+                <Text style={styles.aiGenSub}>
+                  Mỗi lần bấm vào thi, hệ thống AI sẽ biên soạn ngẫu nhiên 100% đề thi mới bám sát cấu trúc HSK {selectedHskLevel} chuẩn quốc tế của Hanban.
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                disabled={generatingAiExam}
+                style={[styles.aiGenBtn, generatingAiExam && styles.btnDisabled]}
+                onPress={() => handleGenerateAiExam(selectedHskLevel)}
+                activeOpacity={0.85}
+              >
+                {generatingAiExam ? (
+                  <>
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                    <Text style={styles.aiGenBtnText}>AI đang biên soạn đề HSK {selectedHskLevel}...</Text>
+                  </>
+                ) : (
+                  <>
+                    <Feather name="zap" size={18} color="#FFFFFF" />
+                    <Text style={styles.aiGenBtnText}>Tạo đề mới & Vào thi ngay (AI)</Text>
+                  </>
+                )}
+              </TouchableOpacity>
             </View>
           </View>
         )}
 
-        {/* TAB 2: DAILY REVIEW & QUICK QUIZ */}
+        {/* TAB 2: DAILY PRACTICE & QUIZ */}
         {activeTab === "daily" && (
           <View style={styles.tabSection}>
-            {/* Daily Challenge Banner */}
             <View style={styles.dailyBanner}>
               <View style={styles.dailyBannerLeft}>
                 <View style={styles.dailyBadge}>
@@ -204,7 +191,7 @@ export default function HSKScreen() {
                 </View>
                 <Text style={styles.dailyBannerTitle}>Thử thách nhanh 5 phút</Text>
                 <Text style={styles.dailyBannerSubtitle}>
-                  Ôn 5 từ vựng ngẫu nhiên để duy trì chuỗi học hằng ngày
+                  Ôn 5 từ vựng ngẫu nhiên để duy trì chuỗi học hằng ngày (Daily Streak)
                 </Text>
               </View>
 
@@ -217,7 +204,6 @@ export default function HSKScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Spaced Repetition Review Box */}
             <View style={styles.spacedReviewCard}>
               <View style={styles.spacedHeader}>
                 <Feather name="refresh-cw" size={16} color={colors.light.primary} />
@@ -247,67 +233,6 @@ export default function HSKScreen() {
             </View>
           </View>
         )}
-
-        {/* TAB 3: HSK VOCABULARY CORE */}
-        {activeTab === "words" && (
-          <View style={styles.tabSection}>
-            {HSK_LEVELS.map((lvl) => {
-              const p = progress[lvl.level];
-              const learned = p?.learned ?? 0;
-              const levelWords = HSK_WORDS.filter((w) => w.hskLevel === lvl.level);
-              const total = levelWords.length;
-              const pct = total > 0 ? Math.round((learned / total) * 100) : 0;
-              const color = colors.hsk[lvl.level - 1];
-
-              return (
-                <TouchableOpacity
-                  key={lvl.level}
-                  style={[styles.card, { borderTopColor: color }]}
-                  onPress={() => router.push({ pathname: "/hsk/[level]", params: { level: lvl.level } })}
-                  activeOpacity={0.8}
-                >
-                  <View style={styles.cardTop}>
-                    <View style={[styles.badge, { backgroundColor: color }]}>
-                      <Text style={styles.badgeText}>HSK {lvl.level}</Text>
-                    </View>
-                    <Text style={styles.pct}>{pct}%</Text>
-                  </View>
-                  <Text style={styles.cardName}>{lvl.description}</Text>
-                  <View style={styles.metaRow}>
-                    <View style={styles.metaItem}>
-                      <Feather name="book" size={13} color={colors.light.mutedForeground} />
-                      <Text style={styles.metaText}>{total} từ trong app</Text>
-                    </View>
-                    <View style={styles.metaItem}>
-                      <Feather name="check-circle" size={13} color="#43A047" />
-                      <Text style={styles.metaText}>{learned} đã học</Text>
-                    </View>
-                  </View>
-                  <View style={styles.progressTrack}>
-                    <View
-                      style={[
-                        styles.progressFill,
-                        { width: `${pct}%` as any, backgroundColor: color },
-                      ]}
-                    />
-                  </View>
-                  <View style={styles.cardFooter}>
-                    <Text style={styles.actionText}>Xem danh sách</Text>
-                    <TouchableOpacity
-                      style={[styles.studyBtn, { backgroundColor: color }]}
-                      onPress={() =>
-                        router.push({ pathname: "/study/[level]", params: { level: lvl.level } })
-                      }
-                    >
-                      <Feather name="play" size={13} color="#fff" />
-                      <Text style={styles.studyBtnText}>Học ngay</Text>
-                    </TouchableOpacity>
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        )}
       </ScrollView>
 
       {/* HSK EXAM PLAYER MODAL */}
@@ -328,7 +253,7 @@ export default function HSKScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.light.background },
-  header: { paddingHorizontal: 20, paddingBottom: 12 },
+  header: { paddingHorizontal: 20, paddingBottom: 10 },
   title: { fontSize: 26, fontFamily: "Inter_700Bold", color: colors.light.foreground },
   subtitle: {
     fontSize: 13,
@@ -342,7 +267,7 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
     borderBottomWidth: 1,
     borderBottomColor: colors.light.border,
-    gap: 8,
+    gap: 10,
   },
   mainTabBtn: {
     flex: 1,
@@ -350,17 +275,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    paddingVertical: 10,
+    paddingVertical: 12,
     borderRadius: 12,
     backgroundColor: "#F5F5F5",
   },
   mainTabBtnActive: {
     backgroundColor: "#FFF5F5",
-    borderWidth: 1,
-    borderColor: "#FFCDD2",
+    borderWidth: 1.5,
+    borderColor: colors.light.primary,
   },
   mainTabText: {
-    fontSize: 13,
+    fontSize: 14,
     fontFamily: "Inter_600SemiBold",
     color: colors.light.mutedForeground,
   },
@@ -368,7 +293,7 @@ const styles = StyleSheet.create({
     color: colors.light.primary,
     fontFamily: "Inter_700Bold",
   },
-  content: { paddingHorizontal: 16, paddingVertical: 16, paddingBottom: 120 },
+  content: { paddingHorizontal: 16, paddingVertical: 14, paddingBottom: 120 },
   tabSection: { gap: 16 },
   levelSelectorBox: { gap: 8 },
   levelSelectorTitle: {
@@ -394,91 +319,60 @@ const styles = StyleSheet.create({
   levelChipTextSelected: {
     color: "#FFFFFF",
   },
-  examList: { gap: 12 },
-  sectionHeaderTitle: {
-    fontSize: 15,
-    fontFamily: "Inter_700Bold",
-    color: colors.light.foreground,
-    marginTop: 4,
-  },
-  examCard: {
-    backgroundColor: "#FFFFFF",
+  aiGenCard: {
+    backgroundColor: "#FFF8F7",
     borderRadius: 20,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: colors.light.border,
-    gap: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  examCardTop: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  officialTag: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: "#E8F5E9",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  officialTagText: {
-    fontSize: 11,
-    fontFamily: "Inter_700Bold",
-    color: "#2E7D32",
-  },
-  examDurationText: {
-    fontSize: 12,
-    color: colors.light.mutedForeground,
-    fontFamily: "Inter_500Medium",
-  },
-  examCardTitle: {
-    fontSize: 17,
-    fontFamily: "Inter_700Bold",
-    color: colors.light.foreground,
-  },
-  examCardSubtitle: {
-    fontSize: 13,
-    color: colors.light.mutedForeground,
-    fontFamily: "Inter_400Regular",
-  },
-  examMetaRow: {
-    flexDirection: "row",
+    padding: 22,
+    borderWidth: 1.5,
+    borderColor: "#FFCDD2",
     gap: 16,
   },
-  metaItem: { flexDirection: "row", alignItems: "center", gap: 5 },
-  metaText: { fontSize: 12, color: colors.light.mutedForeground, fontFamily: "Inter_400Regular" },
-  startExamBtn: {
+  aiGenHeader: {
+    gap: 8,
+  },
+  aiGenBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#FFEEEF",
+    alignSelf: "flex-start",
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#FFCDD2",
+  },
+  aiGenBadgeText: {
+    fontSize: 12,
+    fontFamily: "Inter_700Bold",
+    color: colors.light.primary,
+  },
+  aiGenTitle: {
+    fontSize: 20,
+    fontFamily: "Inter_700Bold",
+    color: colors.light.foreground,
+  },
+  aiGenSub: {
+    fontSize: 13,
+    color: colors.light.mutedForeground,
+    lineHeight: 19,
+  },
+  aiGenBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
     backgroundColor: colors.light.primary,
     borderRadius: 14,
-    paddingVertical: 12,
-    marginTop: 4,
+    paddingVertical: 14,
   },
-  startExamBtnText: {
+  aiGenBtnText: {
     color: "#FFFFFF",
     fontFamily: "Inter_700Bold",
-    fontSize: 14,
+    fontSize: 15,
   },
-  emptyExamBox: {
-    padding: 24,
-    alignItems: "center",
-    backgroundColor: "#F9F9F9",
-    borderRadius: 16,
-  },
-  emptyExamText: {
-    fontSize: 13,
-    color: colors.light.mutedForeground,
-    textAlign: "center",
+  btnDisabled: {
+    opacity: 0.6,
   },
   dailyBanner: {
     backgroundColor: "#FFF8F7",
@@ -585,26 +479,4 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: "#FFF5F5",
   },
-  card: {
-    backgroundColor: colors.light.card,
-    borderRadius: 16,
-    padding: 18,
-    marginBottom: 14,
-    borderWidth: 1,
-    borderColor: colors.light.border,
-    borderTopWidth: 4,
-    gap: 10,
-  },
-  cardTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  badge: { borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5 },
-  badgeText: { color: "#fff", fontFamily: "Inter_700Bold", fontSize: 13 },
-  pct: { fontSize: 20, fontFamily: "Inter_700Bold", color: colors.light.foreground },
-  cardName: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: colors.light.foreground },
-  metaRow: { flexDirection: "row", gap: 18 },
-  progressTrack: { height: 6, backgroundColor: colors.light.muted, borderRadius: 3, overflow: "hidden" },
-  progressFill: { height: "100%", borderRadius: 3 },
-  cardFooter: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 4 },
-  actionText: { fontSize: 13, color: colors.light.primary, fontFamily: "Inter_600SemiBold" },
-  studyBtn: { flexDirection: "row", alignItems: "center", gap: 5, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 7 },
-  studyBtnText: { color: "#fff", fontFamily: "Inter_600SemiBold", fontSize: 13 },
 });

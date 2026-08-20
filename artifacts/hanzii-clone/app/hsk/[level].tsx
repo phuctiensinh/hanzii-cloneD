@@ -34,11 +34,19 @@ export default function HSKLevelScreen() {
   const goToChar = (word: Word) =>
     router.push({ pathname: "/character/[id]", params: { id: word.id } });
 
+  const handleBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace("/(tabs)");
+    }
+  };
+
   return (
     <View style={[styles.container, { paddingTop: topPadding }]}>
       {/* Header */}
       <View style={styles.navBar}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+        <TouchableOpacity onPress={handleBack} style={styles.backBtn}>
           <Feather name="arrow-left" size={22} color={colors.light.foreground} />
         </TouchableOpacity>
         <View style={styles.titleArea}>

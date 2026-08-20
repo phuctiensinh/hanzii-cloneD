@@ -75,18 +75,26 @@ export default function AddWordScreen() {
     }
   };
 
+  const handleBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace("/(tabs)");
+    }
+  };
+
   const handleSave = () => {
     if (!character.trim()) { Alert.alert("Thiếu thông tin", "Vui lòng tự động điền hoặc nhập chữ Hán."); return; }
     if (!meaning.trim()) { Alert.alert("Thiếu thông tin", "Vui lòng nhập nghĩa tiếng Việt."); return; }
     const filteredExamples = examples.filter((ex) => ex.chinese.trim() || ex.vietnamese.trim());
     addWord({ character: character.trim(), traditional: traditional.trim() || character.trim(), pinyin: pinyin.trim(), meaning: meaning.trim(), hskLevel, examples: filteredExamples });
-    router.back();
+    handleBack();
   };
 
   return (
     <View style={[styles.container, { paddingTop: topPad }]}>
       <View style={styles.navBar}>
-        <TouchableOpacity style={styles.navBtn} onPress={() => router.back()}>
+        <TouchableOpacity style={styles.navBtn} onPress={handleBack}>
           <Feather name="arrow-left" size={22} color={colors.light.foreground} />
         </TouchableOpacity>
         <Text style={styles.navTitle}>Thêm từ mới</Text>

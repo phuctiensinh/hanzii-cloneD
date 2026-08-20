@@ -66,6 +66,14 @@ export default function StudyScreen() {
     goToNext();
   }, [goToNext]);
 
+  const handleBack = useCallback(() => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace("/(tabs)");
+    }
+  }, [router]);
+
   if (allWords.length === 0) {
     return (
       <View style={[styles.container, { paddingTop: topPadding }]}>
@@ -108,7 +116,7 @@ export default function StudyScreen() {
             <Feather name="refresh-cw" size={16} color="#fff" />
             <Text style={styles.restartBtnText}>Học lại từ đầu</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+          <TouchableOpacity style={styles.backBtn} onPress={handleBack}>
             <Text style={styles.backBtnText}>Quay lại</Text>
           </TouchableOpacity>
         </View>
@@ -121,7 +129,7 @@ export default function StudyScreen() {
       {/* Header */}
       <View style={styles.header}>
         {/* Close */}
-        <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn}>
+        <TouchableOpacity onPress={handleBack} style={styles.iconBtn}>
           <Feather name="x" size={20} color={colors.light.foreground} />
         </TouchableOpacity>
 

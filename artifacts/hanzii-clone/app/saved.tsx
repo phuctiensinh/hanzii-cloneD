@@ -35,11 +35,19 @@ export default function SavedScreen() {
     toggleSaved(wordId);
   };
 
+  const handleBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace("/(tabs)");
+    }
+  };
+
   return (
     <View style={[styles.container, { paddingTop: topPadding }]}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+        <TouchableOpacity onPress={handleBack} style={styles.backBtn}>
           <Feather name="arrow-left" size={22} color={colors.light.foreground} />
         </TouchableOpacity>
         <Text style={styles.title}>Từ đã lưu</Text>

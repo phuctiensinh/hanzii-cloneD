@@ -89,10 +89,18 @@ export default function CharacterDetailScreen() {
     router.push({ pathname: "/write/[id]", params: { id: word.id } });
   };
 
+  const handleBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace("/(tabs)");
+    }
+  };
+
   const handleDeleteConfirmed = () => {
     setConfirmVisible(false);
     deleteWord(word.id);
-    router.back();
+    handleBack();
   };
 
   const bottomPadding = Platform.OS === "web" ? 34 : insets.bottom;
@@ -102,7 +110,7 @@ export default function CharacterDetailScreen() {
     <View style={styles.container}>
       {/* Custom header */}
       <View style={[styles.navBar, { paddingTop: insets.top + 8 }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.navBtn}>
+        <TouchableOpacity onPress={handleBack} style={styles.navBtn}>
           <Feather name="arrow-left" size={22} color={colors.light.foreground} />
         </TouchableOpacity>
         <View style={styles.navRight}>

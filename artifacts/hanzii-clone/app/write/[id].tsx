@@ -282,11 +282,19 @@ export default function WriteScreen() {
   const SVG_SIZE = 220;
   const PAD_SIZE = 280;
 
+  const handleBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace("/(tabs)");
+    }
+  };
+
   return (
     <View style={[styles.container, { paddingTop: topPadding }]}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+        <TouchableOpacity onPress={handleBack} style={styles.backBtn}>
           <Feather name="arrow-left" size={20} color={colors.light.foreground} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
