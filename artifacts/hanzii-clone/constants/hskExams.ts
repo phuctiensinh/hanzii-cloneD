@@ -23,6 +23,7 @@ export interface HSKSection {
   title: string;
   type: "listening" | "reading" | "writing";
   instructions: string;
+  passage?: string;
   questions: HSKQuestion[];
 }
 
