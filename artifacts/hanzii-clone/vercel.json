@@ -1,9 +1,9 @@
 {
   "installCommand": "npm install",
-  "buildCommand": "./node_modules/.bin/expo export -p web --output-dir dist",
+  "buildCommand": "npx expo export -p web --output-dir dist",
   "outputDirectory": "dist",
   "rewrites": [
-    { "source": "/((?!api/).*)", "destination": "/index.html" }
+    { "source": "/((?!api/|.*\\..*).*)", "destination": "/index.html" }
   ],
   "headers": [
     {

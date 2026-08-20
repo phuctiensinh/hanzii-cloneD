@@ -13,12 +13,15 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
+import { Platform } from "react-native";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider } from "@/context/AuthContext";
 import { LearningProvider } from "@/context/LearningContext";
 import { CustomWordsProvider } from "@/context/CustomWordsContext";
 
-SplashScreen.preventAutoHideAsync();
+if (Platform.OS !== "web") {
+  SplashScreen.preventAutoHideAsync().catch(() => {});
+}
 
 const queryClient = new QueryClient();
 
@@ -50,6 +53,11 @@ function RootLayoutNav() {
   );
 }
 
+function SafeKeyboardProvider({ children }: { children: React.ReactNode }) {
+  if (Platform.OS === "web") return <>{children}</>;
+  return <KeyboardProvider>{children}</KeyboardProvider>;
+}
+
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
     Inter_400Regular,
@@ -59,19 +67,19 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
-    if (fontsLoaded || fontError) {
-      SplashScreen.hideAsync();
+    if ((fontsLoaded || fontError) && Platform.OS !== "web") {
+      SplashScreen.hideAsync().catch(() => {});
     }
   }, [fontsLoaded, fontError]);
 
-  if (!fontsLoaded && !fontError) return null;
+  if (!fontsLoaded && !fontError && Platform.OS !== "web") return null;
 
   return (
     <SafeAreaProvider>
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
           <GestureHandlerRootView style={{ flex: 1 }}>
-            <KeyboardProvider>
+            <SafeKeyboardProvider>
               <AuthProvider>
                 <LearningProvider>
                   <CustomWordsProvider>
@@ -79,7 +87,7 @@ export default function RootLayout() {
                   </CustomWordsProvider>
                 </LearningProvider>
               </AuthProvider>
-            </KeyboardProvider>
+            </SafeKeyboardProvider>
           </GestureHandlerRootView>
         </QueryClientProvider>
       </ErrorBoundary>

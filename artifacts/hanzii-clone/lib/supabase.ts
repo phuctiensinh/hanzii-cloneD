@@ -1,17 +1,13 @@
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || "";
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || "";
+const DEFAULT_SUPABASE_URL = "https://wayrvsekmlxldhiybsfd.supabase.co";
+const DEFAULT_SUPABASE_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndheXJ2c2VrbWx4bGRoaXlic2ZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY0NDI3NTgsImV4cCI6MjEwMjAxODc1OH0.LkgzioPLSs-N_-JqzbIQcjTXtw1Cj-2WqgxGI_dlfA0";
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn(
-    "Supabase credentials missing. Please set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY."
-  );
-}
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || DEFAULT_SUPABASE_URL;
+const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || DEFAULT_SUPABASE_KEY;
 
 // Determine storage: use native localStorage on web, or a no-op for SSR safety.
-// We avoid React Native's AsyncStorage entirely on web because it uses
-// in-memory storage that is wiped on every page reload.
 function getStorage() {
   if (typeof window !== "undefined" && window.localStorage) {
     return window.localStorage;

@@ -14,6 +14,7 @@ import { SpeakerButton } from "@/components/SpeakerButton";
 import { StrokeOrderView } from "@/components/StrokeOrderView";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { Toast } from "@/components/Toast";
+import { PronunciationModal } from "@/components/PronunciationModal";
 
 export default function CharacterDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -28,6 +29,21 @@ export default function CharacterDetailScreen() {
     message: "",
     type: "success",
   });
+  const [pronounceModal, setPronounceModal] = useState<{
+    visible: boolean;
+    targetText: string;
+    pinyin: string;
+    translation: string;
+  }>({
+    visible: false,
+    targetText: "",
+    pinyin: "",
+    translation: "",
+  });
+
+  const openPronunciation = (targetText: string, pinyin: string, translation: string) => {
+    setPronounceModal({ visible: true, targetText, pinyin, translation });
+  };
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const showToast = useCallback((message: string, type: "success" | "info" | "error" = "success") => {
@@ -123,6 +139,14 @@ export default function CharacterDetailScreen() {
           <View style={styles.heroBottom}>
             <HSKBadge level={word.hskLevel} />
             <SpeakerButton text={word.character} size={20} />
+            <TouchableOpacity
+              style={styles.micPill}
+              onPress={() => openPronunciation(word.character, word.pinyin, word.meaning)}
+              activeOpacity={0.8}
+            >
+              <Feather name="mic" size={14} color={colors.light.primary} />
+              <Text style={styles.micPillText}>Luyện đọc từ</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -161,7 +185,17 @@ export default function CharacterDetailScreen() {
               <View key={i} style={styles.exampleCard}>
                 <View style={styles.exHeader}>
                   <Text style={styles.exChinese}>{ex.chinese}</Text>
-                  <SpeakerButton text={ex.chinese} size={15} />
+                  <View style={styles.exActions}>
+                    <SpeakerButton text={ex.chinese} size={15} />
+                    <TouchableOpacity
+                      style={styles.exMicBtn}
+                      onPress={() => openPronunciation(ex.chinese, ex.pinyin, ex.vietnamese)}
+                      activeOpacity={0.8}
+                    >
+                      <Feather name="mic" size={14} color={colors.light.primary} />
+                      <Text style={styles.exMicBtnText}>Luyện đọc câu</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
                 <Text style={styles.exPinyin}>{ex.pinyin}</Text>
                 <View style={styles.divider} />
@@ -227,12 +261,58 @@ export default function CharacterDetailScreen() {
 
       {/* Toast notification */}
       <Toast visible={toast.visible} message={toast.message} type={toast.type} />
+
+      {/* Pronunciation AI Assessment Modal */}
+      <PronunciationModal
+        visible={pronounceModal.visible}
+        targetText={pronounceModal.targetText}
+        pinyin={pronounceModal.pinyin}
+        translation={pronounceModal.translation}
+        onClose={() => setPronounceModal((prev) => ({ ...prev, visible: false }))}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.light.background },
+  micPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#FFF5F5",
+    borderWidth: 1,
+    borderColor: "#FFCDD2",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 16,
+  },
+  micPillText: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+    color: colors.light.primary,
+  },
+  exActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  exMicBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#FFF5F5",
+    borderWidth: 1,
+    borderColor: "#FFCDD2",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 14,
+  },
+  exMicBtnText: {
+    fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
+    color: colors.light.primary,
+  },
   navBar: {
     flexDirection: "row",
     justifyContent: "space-between",
