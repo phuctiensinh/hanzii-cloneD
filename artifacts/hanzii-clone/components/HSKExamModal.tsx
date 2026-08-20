@@ -314,13 +314,19 @@ export function HSKExamModal({ visible, exam, onClose }: Props) {
                 {currentQuestion.options && currentQuestion.options.length > 0 && (
                   <View style={styles.optionsList}>
                     {currentQuestion.options.map((opt) => {
-                      const isSelected = userAnswers[currentQuestion.id] === opt.id;
+                      const userChoice = userAnswers[currentQuestion.id];
+                      const hasChosen = !!userChoice;
+                      const isSelected = userChoice === opt.id;
+                      const isCorrectAnswer = opt.id === currentQuestion.correctAnswer;
+
                       return (
                         <TouchableOpacity
                           key={opt.id}
                           style={[
                             styles.optionCard,
                             isSelected && styles.optionCardSelected,
+                            hasChosen && isCorrectAnswer && styles.optionCardCorrect,
+                            hasChosen && isSelected && !isCorrectAnswer && styles.optionCardIncorrect,
                           ]}
                           onPress={() => handleSelectOption(currentQuestion.id, opt.id)}
                           activeOpacity={0.8}
@@ -329,12 +335,16 @@ export function HSKExamModal({ visible, exam, onClose }: Props) {
                             style={[
                               styles.optionRadio,
                               isSelected && styles.optionRadioSelected,
+                              hasChosen && isCorrectAnswer && styles.optionRadioCorrect,
+                              hasChosen && isSelected && !isCorrectAnswer && styles.optionRadioIncorrect,
                             ]}
                           >
                             <Text
                               style={[
                                 styles.optionRadioText,
                                 isSelected && styles.optionRadioTextSelected,
+                                hasChosen && isCorrectAnswer && styles.optionRadioTextCorrect,
+                                hasChosen && isSelected && !isCorrectAnswer && styles.optionRadioTextIncorrect,
                               ]}
                             >
                               {opt.id}
@@ -345,6 +355,8 @@ export function HSKExamModal({ visible, exam, onClose }: Props) {
                               style={[
                                 styles.optionText,
                                 isSelected && styles.optionTextSelected,
+                                hasChosen && isCorrectAnswer && styles.optionTextCorrect,
+                                hasChosen && isSelected && !isCorrectAnswer && styles.optionTextIncorrect,
                               ]}
                             >
                               {opt.text}
@@ -353,9 +365,42 @@ export function HSKExamModal({ visible, exam, onClose }: Props) {
                               <Text style={styles.optionPinyin}>{opt.pinyin}</Text>
                             )}
                           </View>
+
+                          {hasChosen && isCorrectAnswer && (
+                            <View style={[styles.optionBadge, { backgroundColor: "#E8F5E9" }]}>
+                              <Text style={[styles.optionBadgeText, { color: "#2E7D32" }]}>
+                                ✓ Đáp án đúng
+                              </Text>
+                            </View>
+                          )}
+
+                          {hasChosen && isSelected && !isCorrectAnswer && (
+                            <View style={[styles.optionBadge, { backgroundColor: "#FFEBEE" }]}>
+                              <Text style={[styles.optionBadgeText, { color: "#D32F2F" }]}>
+                                ✗ Bạn đã chọn
+                              </Text>
+                            </View>
+                          )}
                         </TouchableOpacity>
                       );
                     })}
+                  </View>
+                )}
+
+                {/* Instant Explanation Box when answer is chosen */}
+                {!!userAnswers[currentQuestion.id] && (
+                  <View style={styles.instantExpBox}>
+                    <View style={styles.instantExpHeader}>
+                      <Feather name="book-open" size={16} color={colors.light.primary} />
+                      <Text style={styles.instantExpTitle}>
+                        Đáp án đúng là:{" "}
+                        <Text style={{ color: "#2E7D32", fontFamily: "Inter_700Bold" }}>
+                          {currentQuestion.correctAnswer}
+                        </Text>
+                      </Text>
+                    </View>
+                    <Text style={styles.instantExpSubTitle}>💡 Giải thích đáp án chi tiết:</Text>
+                    <Text style={styles.instantExpText}>{currentQuestion.explanation}</Text>
                   </View>
                 )}
 
@@ -819,6 +864,14 @@ const styles = StyleSheet.create({
     borderColor: colors.light.primary,
     backgroundColor: "#FFF8F7",
   },
+  optionCardCorrect: {
+    borderColor: "#2E7D32",
+    backgroundColor: "#E8F5E9",
+  },
+  optionCardIncorrect: {
+    borderColor: "#D32F2F",
+    backgroundColor: "#FFEBEE",
+  },
   optionRadio: {
     width: 32,
     height: 32,
@@ -832,12 +885,26 @@ const styles = StyleSheet.create({
     borderColor: colors.light.primary,
     backgroundColor: colors.light.primary,
   },
+  optionRadioCorrect: {
+    borderColor: "#2E7D32",
+    backgroundColor: "#2E7D32",
+  },
+  optionRadioIncorrect: {
+    borderColor: "#D32F2F",
+    backgroundColor: "#D32F2F",
+  },
   optionRadioText: {
     fontSize: 14,
     fontFamily: "Inter_700Bold",
     color: colors.light.mutedForeground,
   },
   optionRadioTextSelected: {
+    color: "#FFFFFF",
+  },
+  optionRadioTextCorrect: {
+    color: "#FFFFFF",
+  },
+  optionRadioTextIncorrect: {
     color: "#FFFFFF",
   },
   optionContent: {
@@ -851,6 +918,54 @@ const styles = StyleSheet.create({
   },
   optionTextSelected: {
     color: colors.light.primary,
+  },
+  optionTextCorrect: {
+    color: "#2E7D32",
+    fontFamily: "Inter_700Bold",
+  },
+  optionTextIncorrect: {
+    color: "#D32F2F",
+    fontFamily: "Inter_700Bold",
+  },
+  optionBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
+  },
+  optionBadgeText: {
+    fontSize: 11,
+    fontFamily: "Inter_700Bold",
+  },
+  instantExpBox: {
+    backgroundColor: "#FFF8F7",
+    borderRadius: 16,
+    padding: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.light.primary,
+    gap: 6,
+    marginTop: 6,
+  },
+  instantExpHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  instantExpTitle: {
+    fontSize: 14,
+    fontFamily: "Inter_700Bold",
+    color: colors.light.foreground,
+  },
+  instantExpSubTitle: {
+    fontSize: 12,
+    fontFamily: "Inter_700Bold",
+    color: colors.light.primary,
+    marginTop: 2,
+  },
+  instantExpText: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.light.foreground,
+    fontFamily: "Inter_400Regular",
   },
   optionPinyin: {
     fontSize: 12,
