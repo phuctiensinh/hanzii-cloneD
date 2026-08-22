@@ -49,6 +49,26 @@ function RootLayoutNav() {
         name="add-word"
         options={{ headerShown: false, animation: "slide_from_bottom" }}
       />
+      <Stack.Screen
+        name="hsk-test/index"
+        options={{ headerShown: false, animation: "slide_from_right" }}
+      />
+      <Stack.Screen
+        name="hsk-test/exam"
+        options={{ headerShown: false, animation: "fade" }}
+      />
+      <Stack.Screen
+        name="hsk-test/result/[examId]"
+        options={{ headerShown: false, animation: "slide_from_bottom" }}
+      />
+      <Stack.Screen
+        name="hsk-test/history"
+        options={{ headerShown: false, animation: "slide_from_right" }}
+      />
+      <Stack.Screen
+        name="admin/hsk/questions"
+        options={{ headerShown: false, animation: "slide_from_right" }}
+      />
     </Stack>
   );
 }
