@@ -1,0 +1,27 @@
+# dependencies
+node_modules/
+*/node_modules/
+
+# Expo / Builds
+.expo/
+*/.expo/
+dist/
+*/dist/
+web-build/
+*/web-build/
+*.tsbuildinfo
+*/.tsbuildinfo
+.vercel
+*/.vercel
+
+# Environment
+.env
+*.env
+*/.env
+*/.env*
+!.env.example
+!*/.env.example
+
+# OS
+.DS_Store
+Thumbs.db

@@ -124,6 +124,48 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // Local TTS API endpoint proxy
+  if (pathname === "/api/tts") {
+    const text = url.searchParams.get("text") || "";
+    if (!text.trim()) {
+      res.writeHead(400, { "content-type": "application/json" });
+      res.end(JSON.stringify({ error: "text is required" }));
+      return;
+    }
+
+    const ttsUrl =
+      `https://translate.googleapis.com/translate_tts` +
+      `?ie=UTF-8&q=${encodeURIComponent(text)}&tl=zh-CN&client=gtx&ttsspeed=0.85`;
+
+    fetch(ttsUrl, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+        Referer: "https://translate.google.com/",
+      },
+    })
+      .then(async (upstream) => {
+        if (!upstream.ok) {
+          res.writeHead(502, { "content-type": "application/json" });
+          res.end(JSON.stringify({ error: "upstream TTS request failed" }));
+          return;
+        }
+        const contentType = upstream.headers.get("content-type") || "audio/mpeg";
+        const audioBuffer = await upstream.arrayBuffer();
+        res.writeHead(200, {
+          "Content-Type": contentType,
+          "Cache-Control": "public, max-age=86400",
+          "Access-Control-Allow-Origin": "*",
+        });
+        res.end(Buffer.from(audioBuffer));
+      })
+      .catch((err) => {
+        res.writeHead(500, { "content-type": "application/json" });
+        res.end(JSON.stringify({ error: err.message }));
+      });
+    return;
+  }
+
   // Expo Go manifest requests
   if (pathname === "/" || pathname === "/manifest") {
     const platform = req.headers["expo-platform"];

@@ -143,39 +143,66 @@ export default function HSKScreen() {
               </ScrollView>
             </View>
 
-            {/* AI Exam Generator Banner (Unified Light Card Theme) */}
+            {/* AI & Standard Exam Portal Banner */}
             <View style={styles.aiGenCard}>
               <View style={styles.aiGenHeader}>
                 <View style={styles.aiGenBadge}>
-                  <Feather name="cpu" size={14} color={colors.light.primary} />
-                  <Text style={styles.aiGenBadgeText}>AI Exam Generator</Text>
+                  <Feather name="award" size={14} color={colors.light.primary} />
+                  <Text style={styles.aiGenBadgeText}>Thi HSK Chuẩn Quốc Tế</Text>
                 </View>
                 <Text style={styles.aiGenTitle}>
-                  Tạo bộ đề thi HSK {selectedHskLevel} độc bản bằng AI
+                  Hệ thống phòng thi HSK {selectedHskLevel} tự động
                 </Text>
                 <Text style={styles.aiGenSub}>
-                  Mỗi lần bấm vào thi, hệ thống AI sẽ biên soạn ngẫu nhiên 100% đề thi mới bám sát cấu trúc HSK {selectedHskLevel} chuẩn quốc tế của Hanban.
+                  Hỗ trợ cả chuẩn HSK 2.0 & 3.0, phân đoạn Nghe, Đọc, Viết với đồng hồ đếm ngược, chấm điểm bảo mật và chẩn đoán điểm yếu.
                 </Text>
               </View>
 
-              <TouchableOpacity
-                disabled={generatingAiExam}
-                style={[styles.aiGenBtn, generatingAiExam && styles.btnDisabled]}
-                onPress={() => handleGenerateAiExam(selectedHskLevel)}
-                activeOpacity={0.85}
-              >
-                {generatingAiExam ? (
-                  <>
-                    <ActivityIndicator size="small" color="#FFFFFF" />
-                    <Text style={styles.aiGenBtnText}>AI đang biên soạn đề HSK {selectedHskLevel}...</Text>
-                  </>
-                ) : (
-                  <>
-                    <Feather name="zap" size={18} color="#FFFFFF" />
-                    <Text style={styles.aiGenBtnText}>Tạo đề mới & Vào thi ngay (AI)</Text>
-                  </>
-                )}
-              </TouchableOpacity>
+              <View style={styles.examActionButtonsRow}>
+                <TouchableOpacity
+                  style={styles.portalActionBtn}
+                  onPress={() => router.push("/hsk-test" as any)}
+                  activeOpacity={0.85}
+                >
+                  <Feather name="play-circle" size={18} color="#FFFFFF" />
+                  <Text style={styles.portalActionBtnText}>Vào Phòng Thi HSK {selectedHskLevel}</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.historyQuickBtn}
+                  onPress={() => router.push("/hsk-test/history" as any)}
+                >
+                  <Feather name="clock" size={16} color={colors.light.primary} />
+                  <Text style={styles.historyQuickBtnText}>Lịch sử bài thi</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Level Quick Grid */}
+            <View style={styles.levelCardsGrid}>
+              {[1, 2, 3, 4, 5, 6].map((lvl) => {
+                const lvlColor = colors.hsk[lvl - 1];
+                return (
+                  <TouchableOpacity
+                    key={lvl}
+                    style={styles.levelQuickCard}
+                    onPress={() => router.push("/hsk-test" as any)}
+                    activeOpacity={0.8}
+                  >
+                    <View style={[styles.lvlPill, { backgroundColor: lvlColor }]}>
+                      <Text style={styles.lvlPillText}>HSK {lvl}</Text>
+                    </View>
+                    <Text style={styles.lvlTitle}>Đề Thi HSK {lvl}</Text>
+                    <Text style={styles.lvlSub}>
+                      {lvl === 1 ? "40 câu • 35 phút" : lvl === 2 ? "45 câu • 50 phút" : lvl === 3 ? "80 câu • 85 phút" : lvl === 4 ? "100 câu • 100 phút" : lvl === 5 ? "100 câu • 120 phút" : "101 câu • 135 phút"}
+                    </Text>
+                    <View style={styles.lvlCardFooter}>
+                      <Text style={styles.lvlActionText}>Thi thử ngay</Text>
+                      <Feather name="arrow-right" size={14} color={colors.light.primary} />
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           </View>
         )}
@@ -357,19 +384,87 @@ const styles = StyleSheet.create({
     color: colors.light.mutedForeground,
     lineHeight: 19,
   },
-  aiGenBtn: {
+  examActionButtonsRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 4,
+  },
+  portalActionBtn: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
     backgroundColor: colors.light.primary,
-    borderRadius: 14,
-    paddingVertical: 14,
+    borderRadius: 12,
+    paddingVertical: 13,
   },
-  aiGenBtnText: {
+  portalActionBtnText: {
     color: "#FFFFFF",
     fontFamily: "Inter_700Bold",
+    fontSize: 14,
+  },
+  historyQuickBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+    borderRadius: 12,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#FFCDD2",
+  },
+  historyQuickBtnText: {
+    color: colors.light.primary,
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 13,
+  },
+  levelCardsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+    marginTop: 4,
+  },
+  levelQuickCard: {
+    width: "48%",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: colors.light.border,
+    gap: 6,
+  },
+  lvlPill: {
+    alignSelf: "flex-start",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  lvlPillText: {
+    color: "#FFFFFF",
+    fontSize: 11,
+    fontFamily: "Inter_700Bold",
+  },
+  lvlTitle: {
     fontSize: 15,
+    fontFamily: "Inter_700Bold",
+    color: colors.light.foreground,
+  },
+  lvlSub: {
+    fontSize: 12,
+    color: colors.light.mutedForeground,
+  },
+  lvlCardFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 4,
+  },
+  lvlActionText: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+    color: colors.light.primary,
   },
   btnDisabled: {
     opacity: 0.6,
